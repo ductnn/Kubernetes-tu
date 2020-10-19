@@ -13,10 +13,14 @@ title: Kubernetes
     - Tôi ưu hóa việc sử dụng tài nguyên
 
 ## Architecture
+
+### Master Node
 1. Etcd
 2. API Server
 3. Controller Manager Service
 4. Scheduler Service
+
+### Worker Node
 
 ## Node Server
 1. Pod
