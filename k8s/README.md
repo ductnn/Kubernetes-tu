@@ -14,13 +14,45 @@ title: Kubernetes
 
 ## Architecture
 
+![architecture](./img/architecture.png)
+
 ### Master Node
+* Máy chủ điều khiển các máy Worker chạy ứng dụng, bao gồm 4 thành phần chính
+
 1. Etcd
-2. API Server
+* Cơ sở dữ liệu `key: value` của Kubernetes, tất cả thông tin cố  định của Kubernetes được lưu trữ cố  định vào đây.
+* Nó chủ yếu được sử dụng để chia sẻ các cấu hình và **service discovery**
+
+2. Kubernetes API Server
+* Kết nối, giao tiếp giữa các thành phần
+* Nơi tiếp nhận các lệnh REST được sử dụng để kiểm soát cluster
+
 3. Controller Manager Service
+* Quản lý và kiểm tra trạng thái các Worker, đảm nhận việc nhân bản ứng dụng
+
 4. Scheduler Service
+* Lập lịch triển khai cho các ứng dụng, ưng dụng được đặt vào Worker nào để chạy.
 
 ### Worker Node
+* Máy chủ chạy ứng dụng trên đó.
+* Là nơi mà các pod sẽ chạy. 
+* Chứa tất cả các dịch vụ cần thiết để quản lý kết nối mạng giữa các container, giao tiếp với master node, và gán các tài nguyên cho các container theo kế hoạch.
+
+1. Container runtime
+* Thành phần giúp ứng dụng chạy dưới dạng container(thông thường là docker)
+
+2. Kubelet
+* Thành phần giao tiếp với **Kubernetes API Server**, và đảm bảo các containers up và running.
+* Chịu trách nhiệm liên lạc với **Master Node**.
+* Nó cũng liên lạc với etcd, để có được thông tin về dịch vụ và viết chi tiết về những cái mới được tạo ra.
+
+3. Kubernetes Service Proxy
+* Kube-proxy hoạt động như một proxy mạng và cân bằng tải cho một dịch vụ trên một work node.
+* Nó liên quan đến việc định tuyến mạng cho các gói TCP và UDP.
+
+4. Kubectl
+* Giao diện dòng lệnh để giao tiếp với API service.
+* Gửi lệnh đến **Master Node**.
 
 ## Node Server
 1. Pod
@@ -33,6 +65,7 @@ title: Kubernetes
     - **Storage**: Mỗi pod có thể  chỉ định một **shared storage volumes**. Tất cả các container trong pod có thể  truy cập vào các **volumes** này.
 
 2. Replication Controllers
+* Là thành phần quản trị bản sao của Pod, giúp nhân bản hoặc giảm số lượng Pod.
 
 3. Service
 
@@ -63,7 +96,7 @@ title: Kubernetes
 * **ConfigMaps** là giải pháp để  đưa 1 file config / đặt các ENV hay set các argument khi gọi câu lệnh. ConfigMap là một cục config, mà pod nào cần, thì chỉ định là nó cần - giúp dễ dàng chia sẻ file cấu hình.
 * **Secrets** dùng để lưu trữ các password, token,... Nó nằm bên trong container.
 
-7. Labels and Annotations
+7. Labels 
 * **Labels**: Là các cặp `key: value` được gán vào các đối tượng. VD: pods, replication controllers, ...
 ```json
 "metadata": {
