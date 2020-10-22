@@ -103,4 +103,9 @@ default       kubernetes   ClusterIP   10.96.0.1    <none>        443/TCP       
 kube-system   kube-dns     ClusterIP   10.96.0.10   <none>        53/UDP,53/TCP,9153/TCP   80s
 ``` 
 
+### Reference
+* [Minikube](https://kubernetes.io/vi/docs/tasks/tools/install-minikube/)
+* [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/#install-kubectl-on-linux)
+* [Hello Minikube](https://kubernetes.io/docs/tutorials/hello-minikube/)
+
 ### [me](https://github.com/ductnn)
