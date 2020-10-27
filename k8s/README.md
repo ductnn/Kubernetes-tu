@@ -53,6 +53,16 @@ title: Kubernetes
 4. Kubectl
 * Giao diện dòng lệnh để giao tiếp với API service.
 * Gửi lệnh đến **Master Node**.
+  
+## Ingress
+
+![](./img/ingress.png)
+
+* **Ingress** là thành phần được dùng để  điều hướng các yêu cầu **traffic** giao thức HTTP và HTTPS từ bên ngoài (interneet) vào các dịch vụ bên trong Cluster.
+* **Ingress** chỉ để phục vụ các cổng, yêu cầu HTTP, HTTPS còn các loại cổng khác, giao thức khác để truy cập được từ bên ngoài thì dùng **Service** với kiểu `NodePort` và `LoadBalancer`
+* **Ingress Controller**: Ứng dụng chạy trong 1 cluster và sử  dụng cấu hình `LoadBalancer` HTTP theo tài nguyên trong Ingress 
+* [Deploy HAProxy Ingress Controller](./app/HAProxy_Ingress.md)
+* [Deploy NGINX Ingress Controller](./app/nginx_Ingress.md)
 
 ## Node Server
 1. Pod
@@ -74,6 +84,86 @@ title: Kubernetes
 * Vì pod có tuổi thọ ngắn, do vậy sẽ không đảm bảo về  địa chỉ IP cố  định
 * **Service**(svc): Là một lớp nằm trên một nhóm pod, được gán 1 IP tĩnh và có thể  trỏ vào domain của dịch vụ này.
 * Mỗi service sẽ được gán 1 domain do người dùng lựa chọn, khi ứng dụng cần kết nối đến service, ta chỉ cần dùng domain là xong. Domain được quản lý bởi hệ thống name server SkyDNS nội bộ của k8s - một thành phần sẽ được cài khi ta cài k8s
+
+### Cluster IP
+* **Cluster IP**: Service mặc định của kubernetes. Các pod trong từng cụm có thể  truy cập vào, không được quyền truy cập bên ngoài. 
+* Tạo service cluster IP 
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: svc1
+spec:
+  type: ClusterIP
+  ports:
+  - name: port1
+    port: 80
+    targetPort: 80
+```
+* Triển khai `kubectl apply -f svc1.yaml`
+* Lấy các service `kubectl get svc -o wide`
+```sh
+➜  app git:(webserver-test) ✗ kubectl get svc -o wide
+NAME         TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE     SELECTOR
+kubernetes   ClusterIP   10.96.0.1       <none>        443/TCP   3h29m   <none>
+svc1         ClusterIP   10.96.129.109   <none>        80/TCP    167m    <none>
+```
+* Check thông tin service svc1 `kubectl describe svc/svc1`
+```bash
+➜  app git:(webserver-test) ✗ kubectl describe svc/svc1
+Name:              svc1
+Namespace:         default
+Labels:            <none>
+Annotations:       <none>
+Selector:          <none>
+Type:              ClusterIP
+IP:                10.96.129.109
+Port:              port1  80/TCP
+TargetPort:        80/TCP
+Endpoints:         <none>
+Session Affinity:  None
+Events:            <none>
+```
+
+### NodePort
+
+![](./img/nodeport.png)
+
+* **NodePort**: Tạo ra các truy cập từ ngoài bằng IP của các node
+* **NodePort**: Tạo ra truy cập từ IP của node với `port` ngẫu nhiên trong khoảng `30000–32767`, để  ấn định port thì sử dụng tham số  `nodeport`
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: svc2
+spec:
+  selector:
+     app: app1
+  type: NodePort
+  ports:
+  - name: port1
+    port: 80
+    targetPort: 80
+    nodePort: 31080
+```
+* Check thông tin service svc1 `kubectl describe svc/svc2`
+```sh
+➜  app git:(webserver-test) ✗ kubectl describe svc/svc2
+Name:                     svc2
+Namespace:                default
+Labels:                   <none>
+Annotations:              <none>
+Selector:                 app=app1
+Type:                     NodePort
+IP:                       10.103.101.219
+Port:                     port1  80/TCP
+TargetPort:               80/TCP
+NodePort:                 port1  31080/TCP
+Endpoints:                <none>
+Session Affinity:         None
+External Traffic Policy:  Cluster
+Events:                   <none>
+```
 
 4. Volumes
 
