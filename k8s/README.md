@@ -197,4 +197,9 @@ Events:                   <none>
 }
 ```
 
+### Reference 
+[Kubernetes Components](https://kubernetes.io/docs/concepts/overview/components/)
+[Kubernetes Glossary](https://kubernetes.io/vi/docs/reference/glossary/?fundamental=true)
+[Kubernetes NodePort vs LoadBalancer vs Ingress](https://medium.com/google-cloud/kubernetes-nodeport-vs-loadbalancer-vs-ingress-when-should-i-use-what-922f010849e0)
+
 ### [me](https://github.com/ductnn)
