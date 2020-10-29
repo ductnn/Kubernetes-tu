@@ -38,10 +38,28 @@ title: Kubernetes
 * Là nơi mà các pod sẽ chạy. 
 * Chứa tất cả các dịch vụ cần thiết để quản lý kết nối mạng giữa các container, giao tiếp với master node, và gán các tài nguyên cho các container theo kế hoạch.
 
-1. Container runtime
-* Thành phần giúp ứng dụng chạy dưới dạng container(thông thường là docker)
+1. Container runtimes
+* Thành phần giúp ứng dụng chạy dưới dạng container (thông thường là docker)
+* Container runtimes sử  dụng phổ  biến với Kubernetes
+  - [**containerd**](#containerd)
+  - [**CRI-O**](#CRI-O)
+  - [**Docker**](#Docker)
 
-2. Kubelet
+<a name="containerd"></a>
+### **Containerd**
+* A container runtime with an emphasis on simplicity, robustness and portability
+* **containerd** quan tâm đến việc lấy và lưu trữ các images, thực thi container, cung cấp quyền truy cập mạng.
+
+<a name="CRI-O"></a>
+### **CRI-O**
+* **Container Runtime Interface**(CRI): API phục vụ cho việc tích hợp container runtimes với kubelet trên 1 node 
+* **CRI-O** tool dùng để  sử dụng các *OCI container runtime* với Kubernetes CRI 
+* **CRI-O** là 1 thực thi của Container Runtime Interface để  cho phép các container runtime tương thích với  **Open Container Initiative (OCI) runtime spec**.
+
+<a name="Docker"></a>
+### **Docker**
+
+1. Kubelet
 * Thành phần giao tiếp với **Kubernetes API Server**, và đảm bảo các containers up và running.
 * Chịu trách nhiệm liên lạc với **Master Node**.
 * Nó cũng liên lạc với etcd, để có được thông tin về dịch vụ và viết chi tiết về những cái mới được tạo ra.
@@ -49,6 +67,8 @@ title: Kubernetes
 3. Kubernetes Service Proxy
 * Kube-proxy hoạt động như một proxy mạng và cân bằng tải cho một dịch vụ trên một work node.
 * Nó liên quan đến việc định tuyến mạng cho các gói TCP và UDP.
+* [Work](https://www.stackrox.com/post/2020/01/kubernetes-networking-demystified/)
+* [IPtables](https://blogd.net/linux/iptables-chuyen-sau/)
 
 4. Kubectl
 * Giao diện dòng lệnh để giao tiếp với API service.
