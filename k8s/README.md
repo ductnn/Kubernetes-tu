@@ -67,6 +67,35 @@ title: Kubernetes
 3. Kubernetes Service Proxy
 * Kube-proxy hoạt động như một proxy mạng và cân bằng tải cho một dịch vụ trên một work node.
 * Nó liên quan đến việc định tuyến mạng cho các gói TCP và UDP.
+* **kube-proxy** quản lý việc chuyển tiếp lưu lượng truy cập được gửi đến các địa chỉ IP ảo (VIPs) của **Service** trong cụm, kube-proxy hỗ trợ 3 modes
+  - [**User space**](#user-space)
+  - [**iptables**](#iptables)
+  - [**IPVS(IP Virtual Server)**](#IPVS)
+
+<a name="user-space"></a>
+### **User space**
+
+![User space](./img/services-userspace-overview.svg)
+
+- `kube-proxy` sẽ kiểm tra *Kubernetes master* để  thêm và xóa các đối tượng **Service** và **Endpoint**, đối với mỗi dịch vụ, nó sẽ mở ngẫu nhiên 1 port trên node local. Bất kỳ kết nối nào đến "proxy port" đều được ủy quyền cho 1 trong các Pods. *kube-proxy* sẽ cài đặt `SessionAffinity` khi quyết định chọn pod. **User-space** proxy cài đặt các iptables rules để  xác định lưu lượng truy cập vào `clusterIP` và `port` của Services.
+
+<a name="iptables"></a>
+### **IPtables**
+
+![iptables](./img/services-iptables-overview.svg)
+
+- `kube-proxy` sẽ kiểm tra *Kubernetes control plane* để  thêm và xóa các đối tượng **Service** và **Endpoint**. Đối với mỗi **Service**, nó cài đặt các iptables rules, các rules này nắm bắt lưu lượng truy cập vào `clusterIP` và `port` của **Service**, đồng thời chuyển hướng lưu lượng đó đến một trong các pods của **Service**. Với mỗi đối **Endpoint**, nó cài đặt các iptables rules để chọn một Pod phụ trợ.
+- Tại mode này, `kube-proxy` sẽ chọn ngẫu nhiên 1 pod
+- Sử  dụng `iptables` sẽ cho chi phí thấp hơn và đáng tin cậy hơn do lưu lượng sẽ được xử  lý bởi **Linux Netfilter** mà không cần chuyển đổi giữa **user space** và **kernel space** 
+ 
+<a name="IPVS"></a>
+### **IPVS(IP Virtual Server)**
+
+![IPVS](./img/services-ipvs-overview.svg)
+
+- `kube-proxy` kiểm tra **Service** và **Endpoint** của Kubernetes, giao diện **netlink** tạo các rules IPVS phù hợp và đồng bộ hóa các rules IPVS với **Service** và **Endpoint** Kubernetes theo định kỳ. Vòng điều khiển này đảm bảo rằng trạng thái IPVS phù hợp với trạng thái mong muốn. Khi truy cập Service, IPVS hướng lưu lượng truy cập đến một trong các pods.
+- Mode proxy IPVS dựa trên chức năng **netfilter** tương tự như chế độ iptables, nhưng sử dụng bảng băm làm cấu trúc dữ liệu cơ bản và hoạt động trong **Kernel space**, kube-proxy ở mode IPVS chuyển hướng lưu lượng truy cập với độ trễ thấp hơn kube-proxy ở mode `iptables`, với hiệu suất tốt hơn nhiều khi đồng bộ hóa các rules proxy. So với modes proxy khác, IPVS cũng hỗ  trợ lưu lượng mạng cao hơn.
+
 * [Work](https://www.stackrox.com/post/2020/01/kubernetes-networking-demystified/)
 * [IPtables](https://blogd.net/linux/iptables-chuyen-sau/)
 
