@@ -20,7 +20,7 @@ kind: Pod
 metadata:
   name: myapp2
   labels:
-    app: app1
+    app: app2
 spec:
   containers:
   - name: n1
