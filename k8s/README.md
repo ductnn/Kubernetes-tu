@@ -59,7 +59,11 @@ title: Kubernetes
 <a name="Docker"></a>
 ### **Docker**
 
-1. Kubelet
+### Container network runtime
+* [**Network Plugins**](https://kubernetes.io/docs/concepts/extend-kubernetes/compute-storage-net/network-plugins/)
+* [**CNI - the Container Network Interface**](https://github.com/containernetworking/cni)
+
+2. Kubelet
 * Thành phần giao tiếp với **Kubernetes API Server**, và đảm bảo các containers up và running.
 * Chịu trách nhiệm liên lạc với **Master Node**.
 * Nó cũng liên lạc với etcd, để có được thông tin về dịch vụ và viết chi tiết về những cái mới được tạo ra.
@@ -246,9 +250,13 @@ Events:                   <none>
 }
 ```
 
+### Slide
+* [Kubernetes](https://docs.google.com/presentation/d/1tSl0gA71_AkeThP9193PUBxn3kA2KRtqqRBFHwe2FA4/edit#slide=id.ga6a1abf4ee_0_55)
+
 ### Reference 
-[Kubernetes Components](https://kubernetes.io/docs/concepts/overview/components/)
-[Kubernetes Glossary](https://kubernetes.io/vi/docs/reference/glossary/?fundamental=true)
-[Kubernetes NodePort vs LoadBalancer vs Ingress](https://medium.com/google-cloud/kubernetes-nodeport-vs-loadbalancer-vs-ingress-when-should-i-use-what-922f010849e0)
+* [Kubernetes Components](https://kubernetes.io/docs/concepts/overview/components/)
+* [Kunernetes Services](https://kubernetes.io/docs/concepts/services-networking/service/)
+* [Kubernetes Glossary](https://kubernetes.io/vi/docs/reference/glossary/?fundamental=true)
+* [Kubernetes NodePort vs LoadBalancer vs Ingress](https://medium.com/google-cloud/kubernetes-nodeport-vs-loadbalancer-vs-ingress-when-should-i-use-what-922f010849e0)
 
 ### [me](https://github.com/ductnn)
