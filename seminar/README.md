@@ -75,6 +75,24 @@ spec:
 
 ![](../k8s/img/docker-containerd.png)
 
+10. Những dữ liệu lưu trong etcd là dữ liệu gì ? Tại sao phải dùng etcd ?
+* Etcd là hệ thống cơ sở dữ liệu phân tán, nó lưu trữ `configuration data`, `state`
+* Data được đọc từ command `kubectl` đều được lấy ra từ `etcd`
+* Những thay đổi khi sau khi dùng command `kubectl apply` sẽ được tạo hoặc update vào etcd
+```bash
+➜  kubernetes git:(master) ✗ kubectl -n kube-system get pod
+NAME                               READY   STATUS    RESTARTS   AGE
+coredns-f9fd979d6-qbvpp            1/1     Running   0          69m
+etcd-minikube                      1/1     Running   0          69m
+kube-apiserver-minikube            1/1     Running   0          69m
+kube-controller-manager-minikube   1/1     Running   0          69m
+kube-proxy-vg95m                   1/1     Running   0          69m
+kube-scheduler-minikube            1/1     Running   0          69m
+storage-provisioner                1/1     Running   1          69m
+```
+* Etcd cũng lưu trữ 2 trạng thái của hệ thống `actual` và `desired`
+
+
 
 ### Reference
 * [Kubernetes Components](https://kubernetes.io/docs/concepts/overview/components/)
