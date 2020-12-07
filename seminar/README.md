@@ -25,9 +25,25 @@ title: Trả lời câu hỏi seminar
 * **Desired State** is the state that you want the system to be in
 * **Actual State** is the state that the system is actually in
 
-5. PodSpecs
-* **kubelet** hoạt động theo các **PodSpecs**. 
-* **PodSpecs** là file `yml` hoặc `json` để  mô tả Pod
+5. PodSpecs vs kubelet
+* **kubelet** hoạt động theo các **PodSpecs**, đảm bảo các containers đã chạy trong pod ổn định.
+* **kubelet** không quản lý các container mà không được tạo bởi k8s. 
+* **PodSpecs** là file `yml` hoặc `json` bao gồm các thông tin để cài đặt, thư viện, thông tin về `metadata` như tên , version cho các Pod
+```yml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: app-nginx
+  labels:
+    app: app
+spec:
+  containers:
+  - name: nginx
+    image: nginx:1.16
+    ports:
+      - containerPort: 80
+```
+* File `.yml` trên mô tả pod `app-nginx` chạy container nginx tại `port:80` của container 
 
 6. Selector
 * **Labels**: Là các cặp `key: value` được gán vào các đối tượng. VD: pods, replication controllers, ...
