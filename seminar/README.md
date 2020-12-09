@@ -4,15 +4,53 @@ title: Trả lời câu hỏi seminar
 
 1. Container Orchestration
 * Container Orchestration là các công cụ, dịch vụ dùng để  quản lý và điều phối nhiều container 
+  - Cung cấp và triển khai container 
+  - Phân bổ resources giữa các container
+  - Tương tác các dịch vụ đang chạy trong một container ra bên ngoài
+  - Cân bằng tải giữa các containers
+  - Self-healing
+  - Cấu hình ứng dụng liên quan đến container chạy nó
 * Một số  loại Container Orchestration: Kubernetes, Docker Swarm, Google container Engine
 
 2. Self-healing
-* **Self-healing**: Khởi động lại các container bị dừng, thay thế và sắp xếp lại các container khi các node die, xóa bỏ container bị hỏng.
+* **Self-healing**: Khởi động lại các containers bị lỗi, thay thế các container, xoá các container không phản hồi lại cấu hình health check do người dùng xác định.
+```yml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  replicas: 3
+```
+* Cấu hình `Deployment` trên sẻ được gửi tới thành phần API-Server của master Node, và sẽ gửi yêu cầu tạo trên node worker 3 pod chạy nginx
+```bash
+➜  seminar git:(master) ✗ kubectl get pods
+NAME                     READY   STATUS    RESTARTS   AGE
+nginx-644599b9c9-q6fr5   1/1     Running   0          60s
+nginx-644599b9c9-v6xdw   1/1     Running   0          60s
+nginx-644599b9c9-zcx52   1/1     Running   0          60s
+```
+* Thực thi `kubectl delete pod nginx-644599b9c9-q6fr5` xóa đi pod `nginx-644599b9c9-q6fr5`, và kiểm tra
+```bash
+➜  seminar git:(master) ✗ kubectl get pods                         
+NAME                     READY   STATUS    RESTARTS   AGE
+nginx-644599b9c9-pwkbb   1/1     Running   0          5s
+nginx-644599b9c9-v6xdw   1/1     Running   0          4m19s
+nginx-644599b9c9-zcx52   1/1     Running   0          4m19s
+```
+* K8s tự động tạo mới 1 pod `nginx-644599b9c9-pwkbb` để  duy trì số  lượng 3 pod chạy nginx 
+
 
 3. Control Plane là gì ? Control plane bao gồm những thành phần nào ? Ngoài control plane thì còn plane khác không ?
+* Control Plane: Tầng điều khiển các containers, dùng để  đưa ra API, interface để  triển khai và quản lý `lifecircle` của container
+* Data Plane: Tầng này cung cấp về  CPU, memory, network và storage để  các container có thể  run và kết nối network, được tạo thành từ các Worker Node
+
 * Cụm Kubernetes được chia ra thành các thành phần 
     - Master (Control Plane)
-    - Node (Worker)
+    - Node (Worker/Data Plane)
 * **Control Plane**: Có 4 thành phần 
     - API Server
     - Controller Manager
