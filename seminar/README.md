@@ -4,15 +4,53 @@ title: Trả lời câu hỏi seminar
 
 1. Container Orchestration
 * Container Orchestration là các công cụ, dịch vụ dùng để  quản lý và điều phối nhiều container 
+  - Cung cấp và triển khai container 
+  - Phân bổ resources giữa các container
+  - Tương tác các dịch vụ đang chạy trong một container ra bên ngoài
+  - Cân bằng tải giữa các containers
+  - Self-healing
+  - Cấu hình ứng dụng liên quan đến container chạy nó
 * Một số  loại Container Orchestration: Kubernetes, Docker Swarm, Google container Engine
 
 2. Self-healing
-* **Self-healing**: Khởi động lại các container bị dừng, thay thế và sắp xếp lại các container khi các node die, xóa bỏ container bị hỏng.
+* **Self-healing**: Khởi động lại các containers bị lỗi, thay thế các container, xoá các container không phản hồi lại cấu hình health check do người dùng xác định.
+```yml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  replicas: 3
+```
+* Cấu hình `Deployment` trên sẻ được gửi tới thành phần API-Server của master Node, và sẽ gửi yêu cầu tạo trên node worker 3 pod chạy nginx
+```bash
+➜  seminar git:(master) ✗ kubectl get pods
+NAME                     READY   STATUS    RESTARTS   AGE
+nginx-644599b9c9-q6fr5   1/1     Running   0          60s
+nginx-644599b9c9-v6xdw   1/1     Running   0          60s
+nginx-644599b9c9-zcx52   1/1     Running   0          60s
+```
+* Thực thi `kubectl delete pod nginx-644599b9c9-q6fr5` xóa đi pod `nginx-644599b9c9-q6fr5`, và kiểm tra
+```bash
+➜  seminar git:(master) ✗ kubectl get pods                         
+NAME                     READY   STATUS    RESTARTS   AGE
+nginx-644599b9c9-pwkbb   1/1     Running   0          5s
+nginx-644599b9c9-v6xdw   1/1     Running   0          4m19s
+nginx-644599b9c9-zcx52   1/1     Running   0          4m19s
+```
+* K8s tự động tạo mới 1 pod `nginx-644599b9c9-pwkbb` để  duy trì số  lượng 3 pod chạy nginx 
+
 
 3. Control Plane là gì ? Control plane bao gồm những thành phần nào ? Ngoài control plane thì còn plane khác không ?
+* Control Plane: Tầng điều khiển các containers, dùng để  đưa ra API, interface để  triển khai và quản lý `lifecircle` của container
+* Data Plane: Tầng này cung cấp về  CPU, memory, network và storage để  các container có thể  run và kết nối network, được tạo thành từ các Worker Node
+
 * Cụm Kubernetes được chia ra thành các thành phần 
     - Master (Control Plane)
-    - Node (Worker)
+    - Node (Worker/Data Plane)
 * **Control Plane**: Có 4 thành phần 
     - API Server
     - Controller Manager
@@ -83,15 +121,105 @@ spec:
 - `kube-proxy` kiểm tra **Service** và **Endpoint** của Kubernetes, giao diện **netlink** tạo các rules IPVS phù hợp và đồng bộ hóa các rules IPVS với **Service** và **Endpoint** Kubernetes theo định kỳ. Vòng điều khiển này đảm bảo rằng trạng thái IPVS phù hợp với trạng thái mong muốn. Khi truy cập Service, IPVS hướng lưu lượng truy cập đến một trong các pods.
 - Mode proxy IPVS dựa trên chức năng **netfilter** tương tự như chế độ iptables, nhưng sử dụng bảng băm làm cấu trúc dữ liệu cơ bản và hoạt động trong **Kernel space**, kube-proxy ở mode IPVS chuyển hướng lưu lượng truy cập với độ trễ thấp hơn kube-proxy ở mode `iptables`, với hiệu suất tốt hơn nhiều khi đồng bộ hóa các rules proxy. So với modes proxy khác, IPVS cũng hỗ  trợ lưu lượng mạng cao hơn.
 
-8. Docker có phải là container runtime không ?
+8. iptables là do ai tạo ra ? Trong slide 14, Client nghĩa là gì, đại diện cho cái gì?
+* `iptables` là firewall sử  dụng các `rules` có nhiệm vụ xử  lý luồng gói tin đi qua mạng.
+* Trong kubernetes, các rules của iptables được tạo và cấu hình bởi `kube-proxy`. Khi có thay đổi về  `Service` hoặc IP của pod, các `rules` của `iptables` sẽ cập nhật để  định tuyến lưu lượng.  
+
+![iptable](../k8s/img/services-iptables-overview.svg)
+
+* `client` đại diện cho traffice từ bên ngoài qua các rules của `iptables` để  tới các pods bên dưới 
+
+9. Kube-proxy quản lý toàn bộ traffic là đúng hay sai ?
+* `kube-proxy` chỉ forward HTTP traffic 
+* `kube port-forward` forward TCP traffic
+* Tạo pod chạy container `httpd` với `Service: clusterIP` để  traffic bên ngoài không vào được
+```yml
+---
+apiVersion: v1
+kind: Service
+metadata:  
+  name: cluster
+spec:
+  selector:    
+    app: app2
+  type: ClusterIP
+  ports:  
+  - name: http
+    port: 8000
+    targetPort: 80
+    protocol: TCP
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp2
+  labels:
+    app: app2
+spec:
+  containers:
+  - name: n1
+    image: httpd
+    ports:
+      - containerPort: 8000
+```
+```sh
+➜  app git:(master) ✗ kubectl get svc               
+NAME         TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)        AGE
+cluster      ClusterIP   10.98.18.160   <none>        8000/TCP       9m15s
+```
+* `port-foward` có forward traffic sang port local và vào bên trong 
+```bash
+➜  app git:(master) ✗ kubectl port-forward svc/cluster 8000:8000
+Forwarding from 127.0.0.1:8000 -> 80
+Forwarding from [::1]:8000 -> 80
+```
+Kết quả
+```bash
+➜  app git:(master) ✗ curl 127.0.0.1:8000
+<html><body><h1>It works!</h1></body></html>
+```
+
+10. Service expose cái gì ?
+* `Service` **expose** ra port và ip của các pod tùy theo `type`
+* Nếu `Service: clusterIP` thì chỉ expose ra ip và port bên trong, người dùng bên ngoài không thể  truy cập vào được
+```sh
+➜  app git:(master) ✗ kubectl get svc               
+NAME         TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)        AGE
+cluster      ClusterIP   10.98.18.160   <none>        8000/TCP       9m15s
+kubernetes   ClusterIP   10.96.0.1      <none>        443/TCP        3h14m
+```  
+* Nếu `Service: NodePort` thì vẫn expose ra ip và port bên trong, nhưng sẽ kèm theo 1 port mới là `nodeport: 31800`, người dùng có thể  truy cập vào trong pod thông qua nodeport.
+```sh
+➜  app git:(master) ✗ kubectl get svc               
+NAME         TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)        AGE
+nodeport     NodePort    10.97.55.68    <none>        80:31080/TCP   11m
+``` 
+Kết quả
+```sh
+➜  app git:(master) ✗ curl $(minikube ip):31080
+<html><body><h1>It works!</h1></body></html>
+```
+* Nếu `Service: LoadBalancer` thì expose ra ip và port bên trong và kèm theo **EXTERNAL-IP**, tuy nhiên đang chạy trên cụm `minikube` nên sẽ tạo ra 1 port bên ngoài để  người dùng có thể  truy cập vào giống như node port
+```sh
+➜  app git:(master) ✗ kubectl get svc                
+NAME         TYPE           CLUSTER-IP       EXTERNAL-IP   PORT(S)          AGE
+my-service   LoadBalancer   10.101.137.173   <pending>     8080:31017/TCP   4m39s
+``` 
+Kết quả
+```sh
+➜  app git:(master) ✗ curl $(minikube ip):31017
+Hello Kubernetes!% 
+```
+
+12.  Docker có phải là container runtime không ?
 * **Container runtime**: Thành phần chạy và quản lý container 
 * Docker là container runtime 
 
-9. Docker vs containerd
+13.   Docker vs containerd
 
 ![](../k8s/img/docker-containerd.png)
 
-10. Những dữ liệu lưu trong etcd là dữ liệu gì ? Tại sao phải dùng etcd ?
+14.   Những dữ liệu lưu trong etcd là dữ liệu gì ? Tại sao phải dùng etcd ?
 * Etcd là hệ thống cơ sở dữ liệu phân tán, nó lưu trữ `configuration data`, `state`
 * Data được đọc từ command `kubectl` đều được lấy ra từ `etcd`
 * Những thay đổi khi sau khi dùng command `kubectl apply` sẽ được tạo hoặc update vào etcd
@@ -107,11 +235,97 @@ kube-scheduler-minikube            1/1     Running   0          69m
 storage-provisioner                1/1     Running   1          69m
 ```
 * Etcd cũng lưu trữ 2 trạng thái của hệ thống `actual` và `desired`
+* Kiểm tra data lưu trong etcd
+Set ADVERTISE_URL
+```bash
+$ ADVERTISE_URL="https://$(minikube ip):2379"
+```
 
+Lưu file cấu hình của etcd ra file `etcd-kv.json`
+```bash
+kubectl exec -it -n kube-system etcd-minikube -- sh -c \
+"ETCDCTL_API=3 etcdctl \
+--endpoints $ADVERTISE_URL \
+--cacert /var/lib/minikube/certs/etcd/ca.crt \
+--key /var/lib/minikube/certs/etcd/server.key \
+--cert /var/lib/minikube/certs/etcd/server.crt \
+get \"\" --prefix=true -w json" > etcd-kv.json
+```
 
+File [etcd-kv.json](./etcd-kv.json) có dạng
+```json
+{
+  "header": {
+    "cluster_id": 18038207397139142846,
+    "member_id": 12593026477526642892,
+    "revision": 1093,
+    "raft_term": 2
+  },
+  "kvs": [
+    {
+      "key": "L3JlZ2lzdHJ5L2FwaXJlZ2lzdHJhdGlvbi5rOHMuaW8vYXBpc2VydmljZXMvdjEu",
+      "create_revision": 4,
+      "mod_revision": 4,
+      "version": 1,
+      "value": "eyJraW5kIjoiQVBJU2VydmljZSIsImFwaVZlcnNpb24iOiJhcGlyZWdpc3RyYXRpb24uazhzLmlvL3YxYmV0YTEiLCJtZXRhZGF0YSI6eyJuYW1lIjoidjEuIiwidWlkIjoiMGEyNzU0NmMtODlhZS00N2EwLTkxM2YtN2RmMWZlNDJjYTFlIiwiY3JlYXRpb25UaW1lc3RhbXAiOiIyMDIwLTEyLTEwVDA5OjM1OjU2WiIsImxhYmVscyI6eyJrdWJlLWFnZ3JlZ2F0b3Iua3ViZXJuZXRlcy5pby9hdXRvbWFuYWdlZCI6Im9uc3RhcnQifX0sInNwZWMiOnsidmVyc2lvbiI6InYxIiwiZ3JvdXBQcmlvcml0eU1pbmltdW0iOjE4MDAwLCJ2ZXJzaW9uUHJpb3JpdHkiOjF9LCJzdGF0dXMiOnsiY29uZGl0aW9ucyI6W3sidHlwZSI6IkF2YWlsYWJsZSIsInN0YXR1cyI6IlRydWUiLCJsYXN0VHJhbnNpdGlvblRpbWUiOiIyMDIwLTEyLTEwVDA5OjM1OjU2WiIsInJlYXNvbiI6IkxvY2FsIiwibWVzc2FnZSI6IkxvY2FsIEFQSVNlcnZpY2VzIGFyZSBhbHdheXMgYXZhaWxhYmxlIn1dfX0K"
+    },
+    "..."
+  ],
+  "count": 303
+} 
+``` 
+* Các cặp `key/value` được mã hóa dưới dạng `base64`
+
+Decode key
+```bash
+/registry/apiregistration.k8s.io/apiservices/v1.
+```
+Decode value
+```json
+{
+  "kind": "APIService",
+  "apiVersion": "apiregistration.k8s.io/v1beta1",
+  "metadata": {
+      "name": "v1.",
+      "uid": "0a27546c-89ae-47a0-913f-7df1fe42ca1e",
+      "creationTimestamp": "2020-12-10T09:35:56Z",
+      "labels": {
+          "kube-aggregator.kubernetes.io/automanaged": "onstart"
+      }
+  },
+  "spec": {
+      "version": "v1",
+      "groupPriorityMinimum": 18000,
+      "versionPriority": 1
+  },
+  "status": {
+      "conditions": [
+          {
+              "type": "Available",
+              "status": "True",
+              "lastTransitionTime": "2020-12-10T09:35:56Z",
+              "reason": "Local",
+              "message": "Local APIServices are always available"
+          }
+      ]
+  }
+}
+```
+
+* Trong `etcd` lưu các file cấu hình và trạng thái (VD: [File](./key.txt)) của các resource trong cụm bao gồm: 
+  - Nodes
+  - Namespaces
+  - ServiceAccounts
+  - Roles and RoleBindings, ClusterRoles / ClusterRoleBindings
+  - ConfigMaps
+  - Secrets
+  - Deployments, DaemonSets, Pods, ... (Workloads)
+  - apiVersion
+  - events
 
 ### Reference
 * [Kubernetes Components](https://kubernetes.io/docs/concepts/overview/components/)
 * [Kunernetes Services](https://kubernetes.io/docs/concepts/services-networking/service/)
 * [Kubernetes Glossary](https://kubernetes.io/vi/docs/reference/glossary/?fundamental=true)
 * [Docker vs Containerd](https://computingforgeeks.com/docker-vs-cri-o-vs-containerd/)
+* [The Kubernetes Networking Model](https://sookocheff.com/post/kubernetes/understanding-kubernetes-networking-model/)
