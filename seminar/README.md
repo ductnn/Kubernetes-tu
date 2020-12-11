@@ -107,7 +107,115 @@ spec:
     - **Equality-based**: Filter theo `keys` và `values`
     - **Set-based**: Filter `keys` theo `values`
 
-7. User-space, IPVS
+7. Kubelet tương tác đến pods hay tương tác đến tận container? Tại sao?
+* Kubelet run pods. Pods được tạo theo các cấu hình được định nghĩa trong file manifest. Kubelet sẽ lấy các cầu hình từ API Server tạo container và đảm bảo các container được chạy ổn định. 
+* Kubelet tương tác tới pods, và cũng có thể tương tác đến container 
+Tạo lỗi pods
+```sh
+intern@intern-PC:~/Kubernetes-tu/seminar$ kubectl get pods
+NAME                     READY   STATUS             RESTARTS   AGE
+nginx                    0/1     ImagePullBackOff   0          51s
+```
+Apply lại 
+```sh
+intern@intern-PC:~/Kubernetes-tu/seminar$ kubectl get pods
+NAME                     READY   STATUS    RESTARTS   AGE
+nginx                    1/1     Running   0          2m54s
+```
+* Pods vẫn không thay đổi, kubelet chỉ tạo lại container nginx theo file manifest 
+```sh
+Events:
+  Type     Reason     Age                   From               Message
+  ----     ------     ----                  ----               -------
+  Normal   Scheduled  3m14s                 default-scheduler  Successfully assigned default/nginx to minikube
+  Warning  Failed     101s (x3 over 2m57s)  kubelet            Failed to pull image "nginx": rpc error: code = Unknown desc = Error response from daemon: Get https://registry-1.docker.io/v2/: net/http: request canceled while waiting for connection (Client.Timeout exceeded while awaiting headers)
+  Warning  Failed     101s (x3 over 2m57s)  kubelet            Error: ErrImagePull
+  Normal   BackOff    62s (x5 over 2m56s)   kubelet            Back-off pulling image "nginx"
+  Warning  Failed     62s (x5 over 2m56s)   kubelet            Error: ImagePullBackOff
+  Normal   Pulling    48s (x4 over 3m12s)   kubelet            Pulling image "nginx"
+  Normal   Pulled     24s                   kubelet            Successfully pulled image "nginx" in 24.291630114s
+  Normal   Created    22s                   kubelet            Created container nginx
+  Normal   Started    22s                   kubelet            Started container nginx
+```
+8. Có gọi trực tiếp vào API server mà không phải thông qua Kubectl được không? Nếu có thì làm thế nào?
+* Khi gọi vào API Server phải thông qua `kube-proxy` 
+```sh
+➜  seminar git:(master) ✗ kubectl proxy --port=8080 &
+[1] 6804
+➜  seminar git:(master) ✗ Starting to serve on 127.0.0.1:8080 
+```
+Kết quả 
+```sh
+➜  seminar git:(master) ✗ curl http://localhost:8080/api/         
+{
+  "kind": "APIVersions",
+  "versions": [
+    "v1"
+  ],
+  "serverAddressByClientCIDRs": [
+    {
+      "clientCIDR": "0.0.0.0/0",
+      "serverAddress": "192.168.99.100:8443"
+    }
+  ]
+}% 
+```
+* Tuy nhiên có thể gọi trực tiếp vào API Server mà không cần thông qua proxy bằng cách truyền trực tiếp `certificate` xác thực tới API Server 
+* Thực thi command `kubectl config view` để lấy ip server và nơi lưu certificate
+```sh
+intern@intern-PC:~/Kubernetes-tu/seminar$ kubectl config view
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority: /home/intern/.minikube/ca.crt
+    server: https://192.168.99.100:8443
+  name: minikube
+contexts:
+- context:
+    cluster: minikube
+    user: minikube
+  name: minikube
+current-context: minikube
+kind: Config
+preferences: {}
+users:
+- name: minikube
+  user:
+    client-certificate: /home/intern/.minikube/profiles/minikube/client.crt
+    client-key: /home/intern/.minikube/profiles/minikube/client.key
+```
+Kết quả 
+```sh
+intern@intern-PC:~/Kubernetes-tu/seminar$ curl --cacert ~/.minikube/ca.crt --cert ~/.minikube/profiles/minikube/client.crt --key ~/.minikube/profiles/minikube/client.key https://192.168.99.100:8443/api/
+{
+  "kind": "APIVersions",
+  "versions": [
+    "v1"
+  ],
+  "serverAddressByClientCIDRs": [
+    {
+      "clientCIDR": "0.0.0.0/0",
+      "serverAddress": "192.168.99.100:8443"
+    }
+  ]
+}
+``` 
+* Lấy API của các pods 
+```sh
+intern@intern-PC:~/Kubernetes-tu/seminar$ curl -s --cacert ~/.minikube/ca.crt --cert ~/.minikube/profiles/minikube/client.crt --key ~/.minikube/profiles/minikube/client.key https://192.168.99.100:8443/api/v1/pods | jq .items[].metadata | jq '"\(.name), \(.namespace), \(.selfLink)"'
+"nginx-644599b9c9-lfdb9, default, /api/v1/namespaces/default/pods/nginx-644599b9c9-lfdb9"
+"nginx-644599b9c9-vgmr6, default, /api/v1/namespaces/default/pods/nginx-644599b9c9-vgmr6"
+"nginx-644599b9c9-vm2r9, default, /api/v1/namespaces/default/pods/nginx-644599b9c9-vm2r9"
+"coredns-f9fd979d6-4fgvq, kube-system, /api/v1/namespaces/kube-system/pods/coredns-f9fd979d6-4fgvq"
+"etcd-minikube, kube-system, /api/v1/namespaces/kube-system/pods/etcd-minikube"
+"kube-apiserver-minikube, kube-system, /api/v1/namespaces/kube-system/pods/kube-apiserver-minikube"
+"kube-controller-manager-minikube, kube-system, /api/v1/namespaces/kube-system/pods/kube-controller-manager-minikube"
+"kube-proxy-xbcjd, kube-system, /api/v1/namespaces/kube-system/pods/kube-proxy-xbcjd"
+"kube-scheduler-minikube, kube-system, /api/v1/namespaces/kube-system/pods/kube-scheduler-minikube"
+"storage-provisioner, kube-system, /api/v1/namespaces/kube-system/pods/storage-provisioner"
+```
+
+9. User-space, IPVS
 ### User-space
 
 ![User space](../k8s/img/services-userspace-overview.svg)
@@ -121,7 +229,7 @@ spec:
 - `kube-proxy` kiểm tra **Service** và **Endpoint** của Kubernetes, giao diện **netlink** tạo các rules IPVS phù hợp và đồng bộ hóa các rules IPVS với **Service** và **Endpoint** Kubernetes theo định kỳ. Vòng điều khiển này đảm bảo rằng trạng thái IPVS phù hợp với trạng thái mong muốn. Khi truy cập Service, IPVS hướng lưu lượng truy cập đến một trong các pods.
 - Mode proxy IPVS dựa trên chức năng **netfilter** tương tự như chế độ iptables, nhưng sử dụng bảng băm làm cấu trúc dữ liệu cơ bản và hoạt động trong **Kernel space**, kube-proxy ở mode IPVS chuyển hướng lưu lượng truy cập với độ trễ thấp hơn kube-proxy ở mode `iptables`, với hiệu suất tốt hơn nhiều khi đồng bộ hóa các rules proxy. So với modes proxy khác, IPVS cũng hỗ  trợ lưu lượng mạng cao hơn.
 
-8. iptables là do ai tạo ra ? Trong slide 14, Client nghĩa là gì, đại diện cho cái gì?
+10. iptables là do ai tạo ra ? Trong slide 14, Client nghĩa là gì, đại diện cho cái gì?
 * `iptables` là firewall sử  dụng các `rules` có nhiệm vụ xử  lý luồng gói tin đi qua mạng.
 * Trong kubernetes, các rules của iptables được tạo và cấu hình bởi `kube-proxy`. Khi có thay đổi về  `Service` hoặc IP của pod, các `rules` của `iptables` sẽ cập nhật để  định tuyến lưu lượng.  
 
@@ -129,7 +237,7 @@ spec:
 
 * `client` đại diện cho traffice từ bên ngoài qua các rules của `iptables` để  tới các pods bên dưới 
 
-9. Kube-proxy quản lý toàn bộ traffic là đúng hay sai ?
+11. Kube-proxy quản lý toàn bộ traffic là đúng hay sai ?
 * `kube-proxy` chỉ forward HTTP traffic 
 * `kube port-forward` forward TCP traffic
 * Tạo pod chạy container `httpd` với `Service: clusterIP` để  traffic bên ngoài không vào được
@@ -179,7 +287,10 @@ Kết quả
 <html><body><h1>It works!</h1></body></html>
 ```
 
-10. Service expose cái gì ?
+12. LoadBalancer là những phần mềm gì ?
+* 
+
+13. Service expose cái gì ?
 * `Service` **expose** ra port và ip của các pod tùy theo `type`
 * Nếu `Service: clusterIP` thì chỉ expose ra ip và port bên trong, người dùng bên ngoài không thể  truy cập vào được
 ```sh
@@ -211,15 +322,15 @@ Kết quả
 Hello Kubernetes!% 
 ```
 
-12.  Docker có phải là container runtime không ?
+14. Docker có phải là container runtime không ?
 * **Container runtime**: Thành phần chạy và quản lý container 
 * Docker là container runtime 
 
-13.   Docker vs containerd
+15. Docker vs containerd
 
 ![](../k8s/img/docker-containerd.png)
 
-14.   Những dữ liệu lưu trong etcd là dữ liệu gì ? Tại sao phải dùng etcd ?
+16. Những dữ liệu lưu trong etcd là dữ liệu gì ? Tại sao phải dùng etcd ?
 * Etcd là hệ thống cơ sở dữ liệu phân tán, nó lưu trữ `configuration data`, `state`
 * Data được đọc từ command `kubectl` đều được lấy ra từ `etcd`
 * Những thay đổi khi sau khi dùng command `kubectl apply` sẽ được tạo hoặc update vào etcd
