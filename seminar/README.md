@@ -288,6 +288,7 @@ Kết quả
 ```
 
 12. LoadBalancer là những phần mềm gì ?
+* **LoadBalancer** thường dùng 1 số  công cụ mã nguồn mở như `nginx`, `octavia` và `HAproxy`
 * 
 
 13. Service expose cái gì ?
@@ -322,15 +323,63 @@ Kết quả
 Hello Kubernetes!% 
 ```
 
-14. Docker có phải là container runtime không ?
+14. Các thành phần trong master node? Có thể triển khai workload trên master node không? Tại sao?
+
+![](../k8s/img/k8s-architecture-master.jpg)
+
+* Ngoài các thành phần cơ bản thì trong master node cũng có hai thành phần `kube-proxy` và `kubelet`. Các node master cũng có các service được sử dụng để đảm bảo hoạt động của cụm k8s, do đó chúng được chạy trong các container và thuộc một pod có namespaces `kube-system`
+```sh
+➜  kubernetes git:(master) ✗ kubectl get pod --all-namespaces
+NAMESPACE     NAME                               READY   STATUS    RESTARTS   AGE
+kube-system   coredns-f9fd979d6-7dt8f            1/1     Running   0          9m57s
+kube-system   etcd-minikube                      1/1     Running   0          9m57s
+kube-system   kube-apiserver-minikube            1/1     Running   0          9m57s
+kube-system   kube-controller-manager-minikube   1/1     Running   0          9m57s
+kube-system   kube-proxy-srj26                   1/1     Running   0          9m57s
+kube-system   kube-scheduler-minikube            1/1     Running   0          9m57s
+kube-system   storage-provisioner                1/1     Running   0          10m
+```  
+
+* Có thể  triển khai workload lên master node được vì master node đủ các thành phần để  dựng và triển khai ứng dụng lên các pods
+* Tạo 1 pods chạy nginx với namespaces là `kube-system` là namespaces thuộc master node 
+```yml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp1
+  namespace: kube-system
+  labels:
+    app: app1
+spec:
+  containers:
+  - name: n1
+    image: nginx
+  ports:
+    - containerPort: 80
+``` 
+Kiểm tra
+```sh
+➜  app git:(master) ✗ kubectl -n kube-system get pods
+NAME                               READY   STATUS    RESTARTS   AGE
+myapp1                             1/1     Running   0          12m
+```
+
+15. Mô hình em để trong slide là Deployment Arch, hay Logical Arch?
+
+![](../k8s/img/architecture.png)
+
+* Mô hình này vừa là Deployment Arch, vừa là Logical Arch
+* **Node Master** chịu trách nhiệm quản lý cluster. Nó quản lý toàn bộ các hoạt động bên trong cluster, như là việc khởi chạy các ứng dụng, kiểm soát chúng để chắc chắn chúng luôn ở các trạng thái `desired`, scaling, hoặc triển khai các phiên bản update.
+* Một Node có thể là một máy ảo (VM) hoặc một máy tính vật lý làm việc với vai trò cung cấp khả năng tính toán cho cluster. Mỗi một Kubernetes cluster được triển khai trong thực tế khai thác thường có ít nhất 3 node.
+* Thường thì khi triển khai thực tế thì số lượng node worker sẽ nhiều hơn số lượng node master. Do vậy node master hay chính xác là K8S cần hoàn thành tốt nhiệm vụ liên quan tới việc quản lý, xử lý các container sao cho linh hoạt và trơn tru nhất. Ngoài ra, nếu như với các hệ thống thực tế cần có khả năng High Availability thì chúng ta cần triển khai nhiều node master
+
+16.  Docker có phải là container runtime không ? So sánh Docker vs containerd
 * **Container runtime**: Thành phần chạy và quản lý container 
 * Docker là container runtime 
 
-15. Docker vs containerd
-
 ![](../k8s/img/docker-containerd.png)
 
-16. Những dữ liệu lưu trong etcd là dữ liệu gì ? Tại sao phải dùng etcd ?
+17.  Những dữ liệu lưu trong etcd là dữ liệu gì ? Tại sao phải dùng etcd ?
 * Etcd là hệ thống cơ sở dữ liệu phân tán, nó lưu trữ `configuration data`, `state`
 * Data được đọc từ command `kubectl` đều được lấy ra từ `etcd`
 * Những thay đổi khi sau khi dùng command `kubectl apply` sẽ được tạo hoặc update vào etcd
@@ -440,3 +489,5 @@ Decode value
 * [Kubernetes Glossary](https://kubernetes.io/vi/docs/reference/glossary/?fundamental=true)
 * [Docker vs Containerd](https://computingforgeeks.com/docker-vs-cri-o-vs-containerd/)
 * [The Kubernetes Networking Model](https://sookocheff.com/post/kubernetes/understanding-kubernetes-networking-model/)
+* [Kubernetes Architecture](https://github.com/hocchudong/ghichep-kubernetes/blob/master/docs/kubernetes-5min/03.Kientrucvacacthanhphan.md)
+* [Kubernetes Cluster](https://kubernetes.io/vi/docs/tutorials/kubernetes-basics/create-cluster/cluster-intro/)
