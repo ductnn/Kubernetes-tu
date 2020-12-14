@@ -288,8 +288,11 @@ Kết quả
 ```
 
 12. LoadBalancer là những phần mềm gì ?
+* **LoadBalancer** Layer4
 * **LoadBalancer** thường dùng 1 số  công cụ mã nguồn mở như `nginx`, `octavia` và `HAproxy`
-* 
+* VD: LoadBalancer nginx
+```yml
+```
 
 13. Service expose cái gì ?
 * `Service` **expose** ra port và ip của các pod tùy theo `type`
